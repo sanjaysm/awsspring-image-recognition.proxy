@@ -33,6 +33,7 @@ public class AwsController {
     @ResponseBody
     public String home() {
 
+
         /*Regions clientRegion = Regions.DEFAULT_REGION;
         AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
                 .withRegion(clientRegion)
