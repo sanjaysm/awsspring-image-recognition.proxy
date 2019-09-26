@@ -29,10 +29,6 @@ import java.nio.file.StandardCopyOption;
 @RestController
 public class AwsController {
 
-    AwsController(){
-        super();
-    }
-
     @RequestMapping(path = "/", method = RequestMethod.GET)
     @ResponseBody
     public String home() {
