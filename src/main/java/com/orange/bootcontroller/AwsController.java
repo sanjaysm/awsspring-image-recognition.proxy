@@ -38,6 +38,7 @@ public class AwsController {
                 .withRegion(clientRegion)
                 .withCredentials(new ProfileCredentialsProvider())
                 .build();*/
+
         return "Orange face recognition API !";
     }
 
