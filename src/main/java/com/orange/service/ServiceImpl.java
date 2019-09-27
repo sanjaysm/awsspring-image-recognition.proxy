@@ -30,70 +30,77 @@ import java.util.List;
 public class ServiceImpl {
     public final String SUFFIX = "/";
 
-    public Response upload_imageServer(String path, MultipartFile file) {
+    public String imgStoreagepath="";
+    public String bucketname="";
+    public String accessKey="";
+    public String secretKey="";
+    public String awscollectionname="";
+    public String awsRegion="";
+   // public String facematchThreshold="";
 
+    public Response upload_imageServer(String path, MultipartFile file) {
+        Response response = null;
         if (file == null)
             return Response.status(400).entity("Invalid form data").build();
         // create our destination folder, if it not exists
         try {
             createFolderIfNotExists(path);
         } catch (SecurityException se) {
-            return Response.status(500)
-                    .entity("Error in upload_imageServer : Can not create destination folder on server ")
-                    .build();
+            return Response.status(500).entity("Error in upload_imageServer : Can not create destination folder on server ").build();
         }
-
         try {
-
-            store(file);
+            response = store(file ,path);
         } catch (Exception e) {
             return Response.status(500).entity("Error in upload_imageServer : Can not save file").build();
         }
-        return Response.status(200).entity("upload_imageServer Response : File saved to " + path).build();
+        System.out.println("upload_imageServer Response : File saved to " + path);
+        return response;
+
     }
 
-    public Response store(MultipartFile file) {
+    public Response store(MultipartFile file, String path) {
         String filename = StringUtils.cleanPath(file.getOriginalFilename());
         System.out.println("filename  " + filename);
         Response res = null;
         try {
             if (file.isEmpty()) {
-                throw new RuntimeException("Error in store : Failed to store empty file " + filename);
+                throw new RuntimeException("Exception in store : Failed to store empty file " + filename);
             }
             // This is a security check
            /* if (filename.contains("..")) {
                 throw new RuntimeException("Error in store : Cannot store file with relative path outside current directory " + filename);
             }*/
             try (InputStream inputStream = file.getInputStream()) {
-                Files.copy(inputStream, Paths.get("C:\\uploadedFiles\\" + filename), StandardCopyOption.REPLACE_EXISTING);
-                res = upload_S3("C:\\uploadedFiles\\" + filename, filename);
+
+                Files.copy(inputStream, Paths.get(path + filename), StandardCopyOption.REPLACE_EXISTING);
+               // Files.copy(inputStream, Paths.get("C:\\uploadedFiles\\" + filename), StandardCopyOption.REPLACE_EXISTING);
+                res = upload_S3(path + filename, filename);
+               // res = upload_S3("C:\\uploadedFiles\\" + filename, filename);
             }
         } catch (IOException e) {
             //  throw new RuntimeException("Failed to store file " + filename, e);
-            res = Response.status(500).entity("Error in store : " + e).build();
+            return Response.status(500).entity("Exception in store : " + e).build();
         }
         return res;
     }
 
-
     private Response upload_S3(String filepath, String filename) {
-
-            Regions clientRegion = Regions.DEFAULT_REGION;
-            String bucketName = "mys3-bucket-orange2019";
+        Regions clientRegion = Regions.DEFAULT_REGION;
+        String bucketName = "mys3-bucket-orange2019";
 
         File file = new File(filepath);
         long contentLength = file.length();
         long partSize = 5 * 1024 * 1024; // Set part size to 5 MB.
 
         try {
-            AWSCredentials credentials = new BasicAWSCredentials("AKIAW4LYQJANW6JSDWUY", "rZPFImMbWGsj4xnYuW1EvzrEBAEkjG7Ga45eujdA");
+            AWSCredentials credentials = new BasicAWSCredentials("", "");
             AmazonS3 s3Client = new AmazonS3Client(credentials);
 
             PutObjectResult por = s3Client.putObject(new PutObjectRequest(bucketName, filename, new File(filepath))
                     .withCannedAcl(CannedAccessControlList.PublicRead));
 
         } catch (Exception e) {
-            return Response.status(500).entity("Error in upload_S3 : " + e).build();
+            return Response.status(500).entity("Exception in upload_S3 : " + e).build();
         }
 
         return Response.status(200).entity("upload_S3: File upload successfully  in s3 ").build();
@@ -113,13 +120,12 @@ public class ServiceImpl {
 
     }
 
-
-    public void s3_to_collection() {
+    public Response s3_to_collection() {
         final String collectionId = "MyCollection";
-        final String bucket = "mytests3bucket19";//"mys3-bucket-orange2019";
+        final String bucket = "mytests3bucket19";
         final String photo = "sachin1.jpg";
         try {
-            AWSCredentials credentials = new BasicAWSCredentials("AKIAW4LYQJANW6JSDWUY", "rZPFImMbWGsj4xnYuW1EvzrEBAEkjG7Ga45eujdA");
+            AWSCredentials credentials = new BasicAWSCredentials("", "");
             AmazonRekognition rekognitionClient = AmazonRekognitionClientBuilder.standard().withRegion("ap-south-1").withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
 
             Image image = new Image()
@@ -155,38 +161,37 @@ public class ServiceImpl {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            return Response.status(500).entity("Exception in s3_to_collection" + e).build();
         }
+
+        return Response.status(200).entity("successfully move s3 to collection").build();
     }
 
     public Response make_Collection() {
+        String collectionId = "Orance_collection";//"MyCollection";
         try {
-            AWSCredentials credentials = new BasicAWSCredentials("AKIAW4LYQJANW6JSDWUY", "rZPFImMbWGsj4xnYuW1EvzrEBAEkjG7Ga45eujdA");
+            AWSCredentials credentials = new BasicAWSCredentials("", "");
             AmazonRekognition rekognitionClient = AmazonRekognitionClientBuilder.standard().withRegion("ap-south-1").withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
-
-            String collectionId = "MyCollection";
             System.out.println("Creating collection: " + collectionId);
 
             CreateCollectionRequest request = new CreateCollectionRequest().withCollectionId(collectionId);
             CreateCollectionResult createCollectionResult = rekognitionClient.createCollection(request);
-            //  System.out.println("CollectionArn : " + createCollectionResult.getCollectionArn());
-            //  System.out.println("Status code : " + createCollectionResult.getStatusCode().toString());
-        } catch (Exception e) {
-            System.out.println("Exception   " + e);
 
+        } catch (Exception e) {
+            return Response.status(500).entity("Exception in make_Collection " + e).build();
         }
 
-        return null;
+        return Response.status(200).entity("create collection " + collectionId).build();
     }
 
     public Response check_face_validation() {
 
-        final String collectionId = "MyCollection";
+        final String collectionId = "orange";
         final String bucket = "mytests3bucket19";
         final String photo = "sachin1.jpg";
 
         try {
-            AWSCredentials credentials = new BasicAWSCredentials("AKIAW4LYQJANW6JSDWUY", "rZPFImMbWGsj4xnYuW1EvzrEBAEkjG7Ga45eujdA");
+            AWSCredentials credentials = new BasicAWSCredentials("", "");
             AmazonRekognition rekognitionClient = AmazonRekognitionClientBuilder.standard().withRegion("ap-south-1").withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
 
             ObjectMapper objectMapper = new ObjectMapper();
@@ -201,7 +206,7 @@ public class ServiceImpl {
             SearchFacesByImageRequest searchFacesByImageRequest = new SearchFacesByImageRequest()
                     .withCollectionId(collectionId)
                     .withImage(image)
-                    .withFaceMatchThreshold(70F)
+                    .withFaceMatchThreshold(80F)
                     .withMaxFaces(2);
 
             SearchFacesByImageResult searchFacesByImageResult =
@@ -214,9 +219,9 @@ public class ServiceImpl {
                 System.out.println();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            return Response.status(500).entity("Exception in check_face_validation : " + e).build();
         }
-        return null;
+        return Response.status(200).entity("check_face_validation Response").build();
     }
 
     private void createFolderIfNotExists(String dirName)

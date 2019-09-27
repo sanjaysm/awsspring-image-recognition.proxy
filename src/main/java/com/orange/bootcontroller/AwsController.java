@@ -18,6 +18,10 @@ import javax.ws.rs.core.Response;
 @RestController
 public class AwsController {
 
+    /*public  AwsController(){
+
+    }*/
+
     @RequestMapping(path = "/uploadtoCollection", method = RequestMethod.GET)
     @ResponseBody
     public String uploadtoCollection() {
@@ -48,12 +52,14 @@ public class AwsController {
 
     }
 
-    @RequestMapping(path = "/faceValidate", method = RequestMethod.POST, produces = "application/json; charset=UTF-8")
+    @RequestMapping(path = "/faceValidate", method = RequestMethod.POST, produces = "application/json; charset=UTF-8",consumes=MediaType.MULTIPART_FORM_DATA)
     @ResponseBody
-    public Response faceValidate() {
+    public Response faceValidate(@RequestPart("file") @Valid @NotNull @NotBlank MultipartFile file) {
 
+
+        final String UPLOAD_FOLDER = "c:/validateimage/";
         ServiceImpl service= new ServiceImpl();
-        return service.check_face_validation();
+        return service.upload_imageServer(UPLOAD_FOLDER,file);
     }
 
 }
