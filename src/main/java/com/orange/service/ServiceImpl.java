@@ -49,42 +49,37 @@ public class ServiceImpl {
         } catch (Exception e) {
             return Response.status(500).entity("Error in upload_imageServer : Can not save file").build();
         }
-        return Response.status(200).entity("upload_imageServer Response : File saved to "+path ).build();
+        return Response.status(200).entity("upload_imageServer Response : File saved to " + path).build();
     }
 
-    public void store(MultipartFile file) {
+    public Response store(MultipartFile file) {
         String filename = StringUtils.cleanPath(file.getOriginalFilename());
         System.out.println("filename  " + filename);
+        Response res = null;
         try {
             if (file.isEmpty()) {
                 throw new RuntimeException("Error in store : Failed to store empty file " + filename);
             }
             // This is a security check
-            if (filename.contains("..")) {
+           /* if (filename.contains("..")) {
                 throw new RuntimeException("Error in store : Cannot store file with relative path outside current directory " + filename);
-            }
+            }*/
             try (InputStream inputStream = file.getInputStream()) {
                 Files.copy(inputStream, Paths.get("C:\\uploadedFiles\\" + filename), StandardCopyOption.REPLACE_EXISTING);
-                upload_S3("C:\\uploadedFiles\\" + filename, filename);
+                res = upload_S3("C:\\uploadedFiles\\" + filename, filename);
             }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file " + filename, e);
+            //  throw new RuntimeException("Failed to store file " + filename, e);
+            res = Response.status(500).entity("Error in store : " + e).build();
         }
-
+        return res;
     }
 
-    private void createFolderIfNotExists(String dirName)
-            throws SecurityException {
-        File theDir = new File(dirName);
-        if (!theDir.exists()) {
-            theDir.mkdir();
-        }
-    }
 
-    private final Response upload_S3(String filepath, String filename) {
+    private Response upload_S3(String filepath, String filename) {
 
-        Regions clientRegion = Regions.DEFAULT_REGION;
-        String bucketName = "mys3-bucket-orange2019";
+            Regions clientRegion = Regions.DEFAULT_REGION;
+            String bucketName = "mys3-bucket-orange2019";
 
         File file = new File(filepath);
         long contentLength = file.length();
@@ -98,10 +93,10 @@ public class ServiceImpl {
                     .withCannedAcl(CannedAccessControlList.PublicRead));
 
         } catch (Exception e) {
-            return Response.status(500).entity("Error in upload_S3 : "+e).build();
+            return Response.status(500).entity("Error in upload_S3 : " + e).build();
         }
 
-        return   Response.status(200).entity("File store successfully store in s3 ").build();
+        return Response.status(200).entity("upload_S3: File upload successfully  in s3 ").build();
     }
 
     public void createFolder(String bucketName, String folderName, AmazonS3 client) {
@@ -222,5 +217,13 @@ public class ServiceImpl {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private void createFolderIfNotExists(String dirName)
+            throws SecurityException {
+        File theDir = new File(dirName);
+        if (!theDir.exists()) {
+            theDir.mkdir();
+        }
     }
 }
